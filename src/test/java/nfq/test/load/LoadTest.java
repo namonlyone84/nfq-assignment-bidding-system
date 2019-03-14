@@ -152,6 +152,8 @@ public class LoadTest extends BaseIntegrationTest {
                     ResponseEntity<Long> response = restTemplate.postForEntity("/api/jobs/" + JOB_ID + "/bidding?userId=" + bidderId,
                             httpEntity, Long.class);
 
+                    numberRequest++;
+
                     //save results into property
                     biddingIds.add((Long) response.getBody());
 
