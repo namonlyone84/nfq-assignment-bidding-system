@@ -6,17 +6,18 @@ import nfq.bidding.repository.BiddingRepository;
 import nfq.bidding.repository.JobRepository;
 import nfq.bidding.repository.UserRepository;
 import nfq.test.BaseIntegrationTest;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.test.web.reactive.server.WebTestClient;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -45,9 +46,6 @@ public class LoadTest extends BaseIntegrationTest {
 
     @Resource
     private BiddingRepository biddingRepository;
-
-    @Resource
-    private TestRestTemplate restTemplate;
 
     @Before
     @Override
@@ -130,8 +128,7 @@ public class LoadTest extends BaseIntegrationTest {
     }
 
     private Runnable createThread(long bidderId, CompletableFuture<List<Long>> future) {
-        WebTestClient client = WebTestClient.bindToServer().baseUrl("http://localhost:" + this.port)
-                .responseTimeout(Duration.ofMillis(35000)).build();
+        TestRestTemplate restTemplate = new TestRestTemplate();
 
         Bidding bidding = createNewBid(BigDecimal.valueOf(51));
 
@@ -149,13 +146,14 @@ public class LoadTest extends BaseIntegrationTest {
                     HttpHeaders httpHeaders = new HttpHeaders();
                     httpHeaders.setContentType(MediaType.APPLICATION_JSON_UTF8);
                     HttpEntity<Bidding> httpEntity = new HttpEntity<>(bidding, httpHeaders);
-                    ResponseEntity<Long> response = restTemplate.postForEntity("/api/jobs/" + JOB_ID + "/bidding?userId=" + bidderId,
+                    ResponseEntity<Long> response = restTemplate.
+                            postForEntity(createURLWithPort("/api/jobs/" + JOB_ID + "/bidding?userId=" + bidderId),
                             httpEntity, Long.class);
 
                     numberRequest++;
 
                     //save results into property
-                    biddingIds.add((Long) response.getBody());
+                    biddingIds.add(response.getBody());
 
                     //Add results into future
                     logger.info("Bidder" + bidderId + " number request: " + numberRequest + " bidding:" + biddingIds.toString());
@@ -167,6 +165,10 @@ public class LoadTest extends BaseIntegrationTest {
                 }
             }
         };
+    }
+
+    private String createURLWithPort(String uri) {
+        return "http://localhost:" + port + uri;
     }
 
     @After
